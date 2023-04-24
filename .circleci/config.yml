@@ -67,14 +67,19 @@ commands:
     steps:
       - run:
           name: Revert migrations
-          when: on_fail          
-          
+          when: on_fail
           command: |
-
+            # Install Node.js 13
+            # First: we install lts version as base
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+            sudo apt install -y nodejs
+            # Then: we install n version manager to get to required version
+            sudo npm install --global n
+            sudo n 13.8.0
 
             SUCCESS=$(curl https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
             # Revert database changes
-            if  (( $SUCCESS==1 )); 
+            if [[ $SUCCESS==1 ]]
             then
               cd ~/project/backend
               npm install
@@ -257,22 +262,58 @@ jobs:
       - run:
           name: Run migrations
           command: |
-
+            # export TYPEORM_HOST=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
             cd backend
             npm install
-            npm run migrations > migrations_dump.txt
-      
-      - run:
-          name: Send migration status to kvdb.io
-          command: |
-            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
-            then
-             curl https://kvdb.io/S{KVDB_BUCKET}/migration_${CIRCLE_WORKFLOW_ID:0:7}   -d '1'
-            fi
-
-
+            npm run premigrations
+            npm run migrations
+      # - run:
+      #     name: Send migration results to memstash
+      #     command: |
+      #       # Your code here
+      #       exit 1
      # Here's where you will add some code to rollback on failure  
 
+
+
+  # deploy-frontend:
+  #   docker:
+  #     - image: cimg/base:stable
+  #   steps:
+  #     - checkout
+  #     - install_aws_cli
+  #     - install_nodejs
+  #     - restore_cache:
+  #         keys: [frontend-deps]
+  #     - run:
+  #         name: Install dependencies
+  #         command: |
+  #           cd frontend
+  #           npm install
+  #     - run:
+  #         name: Get backend url
+  #         command: |
+  #           BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+  #           --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+  #           --query 'Reservations[*].Instances[*].PublicIpAddress' \
+  #           --output text)
+  #           # export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
+  #           echo API_URL=${API_URL} > .env
+  #           cat frontend/.env
+  #           # cat .env
+  #     - run:
+  #         name: Deploy frontend objects
+  #         command: |
+  #           cd frontend
+  #           # BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+  #           # --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+  #           # --query 'Reservations[*].Instances[*].PublicIpAddress' \
+  #           # --output text)
+  #           # export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
+  #           npm run build
+  #           aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+  #     - destroy-environment
+  #     - revert-migrations
 
   deploy-frontend:
     docker:
@@ -449,15 +490,40 @@ jobs:
               aws cloudformation delete-stack --stack-name "backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "frontend-${OldWorkflowID}"
             fi
-
+            
+  # cleanup:
+  #     docker:
+  #       - image: cimg/base:stable
+  #     steps:
+  #       - checkout
+  #       - install_aws_cli
+  #       - install_nodejs
+  #       - run:
+  #           name: Cleanup old stacks and files
+  #           command: |
+  #             # First: Get old stack workflow id
+  #             export OldWorkflowID=$(curl --insecure https://kvdb.io/${KVDB_BUCKET}/old_workflow_id)
+  #             echo "Old workflow ID: $OldWorkflowID"
+  #             # Then: Get stacks list
+  #             export STACKS=($(aws cloudformation list-stacks \
+  #             --query "StackSummaries[*].StackName" \
+  #             --stack-status-filter CREATE_COMPLETE --no-paginate --output text))
+  #             echo Stacks list: "${STACKS[@]}"
+  #             # Finally: Remove old stacks
+  #             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
+  #             then
+  #               aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
+  #               aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
+  #               aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
+  #             fi
   notify_on_success:
-      docker:
-        - image: cimg/base:stable
-      steps:
-       - slack/notify:
-           event: pass
-           channel: cicd-udacity-project
-           template: success_tagged_deploy_1
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - slack/notify:
+          event: pass
+          channel: cicd-udacity-project
+          template: success_tagged_deploy_1
 
 workflows:  # create workflows
   default:
@@ -483,7 +549,7 @@ workflows:  # create workflows
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
-              only: [main]
+              only: [master]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
       - run-migrations:
@@ -498,4 +564,3 @@ workflows:  # create workflows
           requires: [smoke-test]
       - cleanup:
           requires: [cloudfront-update]
-          
