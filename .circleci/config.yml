@@ -450,14 +450,14 @@ jobs:
               aws cloudformation delete-stack --stack-name "frontend-${OldWorkflowID}"
             fi
 
-    notify_on_success:
+  notify_on_success:
       docker:
         - image: cimg/base:stable
       steps:
-        - slack/notify:
-            event: pass
-            channel: cicd-udacity-project
-            template: success_tagged_deploy_1
+       - slack/notify:
+           event: pass
+           channel: cicd-udacity-project
+           template: success_tagged_deploy_1
 
 workflows:  # create workflows
   default:
@@ -498,3 +498,4 @@ workflows:  # create workflows
           requires: [smoke-test]
       - cleanup:
           requires: [cloudfront-update]
+          
