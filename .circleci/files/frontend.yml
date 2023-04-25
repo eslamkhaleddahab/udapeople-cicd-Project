@@ -11,14 +11,14 @@ Resources:
     Properties:
       BucketName: !Sub "udapeople-${ID}"
       AccessControl: PublicRead
+  OwnershipControls:
+    Type: AWS::S3::BucketOwnershipControls
+    Properties:
+      Bucket: !Sub "udapeople-${ID}"
       OwnershipControls:
-       Type: AWS::S3::BucketOwnershipControls
-       Properties:
-       Bucket: !Sub "udapeople-${ID}"
-        OwnershipControls:
-         Rules:
-           - ObjectOwnership:
-             BucketOwnerEnforced: {}
+        Rules:
+          - ObjectOwnership:
+              BucketOwnerEnforced: {}
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: 404.html
