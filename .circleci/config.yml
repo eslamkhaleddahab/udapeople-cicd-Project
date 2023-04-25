@@ -237,32 +237,34 @@ jobs:
   #           - project/.circleci/ansible/inventory.txt
   #     # Here's where you will add some code to rollback on failure
   #     # - destroy-environment
+ 
   deploy-infrastructure:
     docker:
       - image: amazon/aws-cli
     steps:
+
       - checkout
-      - add_ssh_keys:
-          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
+      
       - run:
           name: Install dependencies
           command: |
             yum install -y tar gzip
-      - run:
-          name: Ensure back-end infrastructure exists
-          command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/backend.yml \
-              --tags project=backend \
-              --stack-name "backend" \
-              --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:5}
+      # - run:
+      #     name: Ensure back-end infrastructure exists
+      #     command: |
+      #       aws cloudformation deploy \
+      #         --template-file .circleci/files/backend.yml \
+      #         --tags project=udapeople \
+      #         --stack-name "backend" \
+      #         --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:5}
+
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --tags project="Initial-Stack" \
-              --stack-name "Initial-Stack-${CIRCLE_WORKFLOW_ID:0:5}" \
+              --tags project=udapeople \
+              --stack-name "frontend-${CIRCLE_WORKFLOW_ID:0:5}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:5}"
       - run:
           name: Add back-end ip to ansible inventory
@@ -272,6 +274,8 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+#       # Here's where you will add some code to rollback on failure      
+      # - destroy_environment
             
 
   configure-infrastructure:
