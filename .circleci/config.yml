@@ -327,13 +327,11 @@ jobs:
     docker:
       - image: mareimorsy/aws-node
     steps:
-
       - checkout
-
       - add_ssh_keys:
           fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - restore_cache:
-          keys: [backend]
+          keys: [deploy-backend]
       - attach_workspace:
           at: ~/
       - run:
