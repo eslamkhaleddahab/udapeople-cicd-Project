@@ -9,33 +9,16 @@ Resources:
   WebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "udapeople-${ID}"
+      BucketName: !Sub "udapeople-kwcipmu1qc"
       AccessControl: PublicRead
-  OwnershipControls:
-    Type: AWS::S3::BucketOwnershipControls
-    Properties:
-      Bucket: !Sub "udapeople-${ID}"
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership:
-              BucketOwnerEnforced: {}
+
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: 404.html
   
-  WebsiteBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref 'WebsiteBucket'
-      PolicyDocument:
-        Statement:
-        - Sid: PublicReadForGetBucketObjects
-          Effect: Allow
-          Principal: '*'
-          Action: s3:GetObject
-          Resource: !Join ['', ['arn:aws:s3:::', !Ref 'WebsiteBucket', /*]]
 
 Outputs:
+
   WebsiteURL:
     Value: !GetAtt WebsiteBucket.WebsiteURL
     Description: URL for website hosted on S3
