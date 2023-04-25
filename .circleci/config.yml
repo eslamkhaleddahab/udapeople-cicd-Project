@@ -330,10 +330,10 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
-      - restore_cache:
-          keys: [deploy-backend]
-      - attach_workspace:
-          at: ~/
+      # - restore_cache:
+      #     keys: [deploy-backend]
+      # - attach_workspace:
+      #     at: ~/
       - run:
           name: Deploy back-end
           command: |
