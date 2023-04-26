@@ -511,7 +511,7 @@ workflows:  # create workflows
             branches: 
               only: [master]
       - configure-infrastructure:
-          requires: [deploy-infrastructure]
+          requires: [deploy-infrastructure] 
       - run-migrations:
           requires: [configure-infrastructure]
       - deploy-frontend:
