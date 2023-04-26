@@ -8,13 +8,12 @@ Parameters:
 
 Resources:
   WebsiteBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "udapeople-${ID}" 
-      # AccessControl: PublicRead << Remove
-      OwnershipControls:  # << Add
-      Rules:
-      - ObjectOwnership: ObjectWriter
+      Type: AWS::S3::Bucket
+      Properties:
+        # AccessControl: PublicRead << Remove
+        OwnershipControls:  # << Add
+           Rules:
+            - ObjectOwnership: ObjectWriter
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: 404.html
