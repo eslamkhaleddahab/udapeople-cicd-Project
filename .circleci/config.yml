@@ -305,31 +305,24 @@ jobs:
   
   deploy-backend:
     docker:
-      - image: cimg/base:stable
+      - image: mareimorsy/aws-node
     steps:
       - checkout
-      - install_aws_cli
-      - install_ansible
-      - install_nodejs
+
       - add_ssh_keys:
-          fingerprints: ["a6:0c:e0:62:2d:d6:cc:f7:6e:18:15:7e:3d:16:59:ca"]
-      - attach_workspace:
-          at: ~/
-      - restore_cache:
-          keys: [backend-build]
+          fingerprints: - ["a6:0c:e0:62:2d:d6:cc:f7:6e:18:15:7e:3d:16:59:ca"]
+        
+
       - run:
-          name: Install dependencies
+          name: Deploy backend
           command: |
+            export TYPEORM_HOST=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text >> .circleci/ansible/inventory.txt
+            
             cd backend
-            npm install
-      - run:
-          name: Package backend
-          command: |
-            cd backend
-            export TYPEORM_MIGRATIONS_DIR=./dist/migrations
-            export TYPEORM_ENTITIES=./dist/modules/domain/**/*.entity{.ts,.js}
-            export TYPEORM_MIGRATIONS=./dist/migrations/*{.ts,.js}
-            echo "TYPEORM_ENTITIES=${TYPEORM_ENTITIES}" > .env
+            npm i
+            npm run build
+            echo "TYPEORM_ENTITIES=./dist/modules/domain/**/*.entity{.ts,.js}" >> .env
             echo "TYPEORM_HOST=${TYPEORM_HOST}" >> .env
             echo "TYPEORM_PORT=${TYPEORM_PORT}" >> .env
             echo "TYPEORM_USERNAME=${TYPEORM_USERNAME}" >> .env
@@ -337,23 +330,16 @@ jobs:
             echo "TYPEORM_DATABASE=${TYPEORM_DATABASE}" >> .env
             echo "TYPEORM_MIGRATIONS_DIR=./dist/migrations" >> .env
             echo "TYPEORM_MIGRATIONS=./dist/migrations/*.ts" >> .env
-            npm run build
-            tar czf artifacts.tar.gz dist/* package* .env
-            cd ..
-            cp backend/artifacts.tar.gz .circleci/ansible/roles/deploy/files
-      - run:
-          name: Deploy backend
-          command: |
-            cd backend
-            export TYPEORM_MIGRATIONS_DIR=./dist/migrations
-            export TYPEORM_ENTITIES=./dist/modules/domain/**/*.entity{.ts,.js}
-            export TYPEORM_MIGRATIONS=./dist/migrations/*{.ts,.js}
-            cd ..
-            cd .circleci/ansible
+            tar -czf artifact.tar.gz dist/* package* .env
+            cp artifact.tar.gz ~/project/.circleci/ansible/roles/deploy-backend/artifact.tar.gz
+            ls ../.circleci/ansible/roles/deploy-backend/
+            cd ../.circleci/ansible
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
-      - destroy-environment
-      - revert-migrations
+      - destroy-environment:
+          Workflow_ID: "${CIRCLE_WORKFLOW_ID:0:5}"
+      - revert-migrations:
+          Workflow_ID: "${CIRCLE_WORKFLOW_ID:0:5}"
   
   smoke-test:
     docker:
