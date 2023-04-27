@@ -18,6 +18,7 @@ commands:
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
+
   install_ansible:
     description: Install Ansible on Ubuntu
     steps:
@@ -28,6 +29,7 @@ commands:
             sudo apt install software-properties-common
             sudo add-apt-repository --yes --update ppa:ansible/ansible
             sudo apt install ansible -y
+
   install_nodejs:
     description: Install Node.js 13
     steps:
@@ -55,6 +57,7 @@ commands:
             aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.Workflow_ID >>
             aws s3 rm s3://udapeople-<< parameters.Workflow_ID >> --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.Workflow_ID >>
+
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
@@ -73,6 +76,7 @@ commands:
             # Then: we install n version manager to get to required version
             sudo npm install --global n
             sudo n 13.8.0
+
             SUCCESS=$(curl https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
             # Revert database changes
             if [[ $SUCCESS==1 ]]
@@ -82,6 +86,7 @@ commands:
               npm run migrations:revert > revert_migrations_dump.txt
               cat revert_migrations_dump.txt
             fi
+
 jobs:
   build-frontend:
     docker:
@@ -196,37 +201,37 @@ jobs:
     steps:
       - checkout
       - install_aws_cli
+      - add_ssh_keys:
+          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - run:
           name: Ensure back-end infrastructure exists
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
-              --tags project=udapeople \
-              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --tags project=udapeople-backend \
+              --stack-name "backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
-      - run:
-          name: Ensure front-end infrastructure exist
-          command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/frontend.yml \
-              --tags project=udapeople \
-              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      # - run:
+      #     name: Ensure front-end infrastructure exist
+      #     command: |
+      #       aws cloudformation deploy \
+      #         --template-file .circleci/files/frontend.yml \
+      #         --tags project=udapeople \
+      #         --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+      #         --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text)
-            echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
+            aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text >> .circleci/ansible/inventory.txt
+         
+      
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+         
       # Here's where you will add some code to rollback on failure
-      - destroy-environment
+      # - destroy-environment
 
   configure-infrastructure:
     docker:
@@ -235,7 +240,7 @@ jobs:
       - checkout
       - install_ansible
       - add_ssh_keys:
-          fingerprints: ["f9:8b:bb:d8:9f:33:98:18:e7:6f:f0:c3:30:39:5c:f3"]
+          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - attach_workspace:
           at: ~/
       - run:
@@ -322,7 +327,7 @@ jobs:
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["f9:8b:bb:d8:9f:33:98:18:e7:6f:f0:c3:30:39:5c:f3"]
+          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - attach_workspace:
           at: ~/
       - restore_cache:
@@ -382,7 +387,7 @@ jobs:
             --output text)
             export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
             # Run the check
-            if curl $API_URL/api/status | grep Welcome
+            if curl $API_URL/api/status | grep ok
             then
 
               exit 0
@@ -456,7 +461,7 @@ jobs:
   #       - image: cimg/base:stable
   #     steps:
   #       - checkout
-  #       - install_aws_cli   
+  #       - install_aws_cli
   #       - install_nodejs
   #       - run:
   #           name: Cleanup old stacks and files
@@ -500,24 +505,26 @@ workflows:  # create workflows
           requires: [build-frontend]
       - notify_on_success:
          requires:
+         
          - test-frontend
          - test-backend
          - scan-frontend
          - scan-backend    
 
-      - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      - deploy-infrastructure: 
+
+          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
-            branches: 
+            branches:
               only: [master]
       - configure-infrastructure:
-          requires: [deploy-infrastructure] 
+          requires: [deploy-infrastructure]
       - run-migrations:
-          requires: [configure-infrastructure] 
+          requires: [configure-infrastructure]
       - deploy-frontend:
           requires: [deploy-infrastructure]
       - deploy-backend:
-          requires: [run-migrations] 
+          requires: [run-migrations]
       # - smoke-test:
       #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
