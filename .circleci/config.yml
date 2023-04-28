@@ -248,7 +248,7 @@ jobs:
       - image: mareimorsy/aws-node
   
     steps:
-      - checkout
+      - checkout 
       - run:
           name: Run migrations
           command: |
