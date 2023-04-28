@@ -313,10 +313,10 @@ jobs:
       # - install_nodejs
       - add_ssh_keys:
           fingerprints: ["99:f9:df:cb:72:06:35:04:8d:1f:55:88:23:93:7f:bd"] 
-      # - attach_workspace:
-      #     at: ~/
-      # - restore_cache:
-          # keys: [backend-build]
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys: [backend-build]
       - run:
           name: Deploy backend
           command: |
@@ -345,7 +345,7 @@ jobs:
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
             
-      - destroy-environment   
+      # - destroy-environment   
           # - revert-migrations 
   
   smoke-test:
@@ -469,27 +469,27 @@ jobs:
 workflows:  # create workflows
   default:
     jobs:
-      # - build-frontend
-      # - build-backend
-      # - test-frontend:
-      #    requires: [build-frontend]
-      # - test-backend:
-      #    requires: [build-backend]
-      # - scan-backend:
-      #     requires: [build-backend]
-      # - scan-frontend:
-      #     requires: [build-frontend]  
-      # - notify_on_success:
-      #    requires:
+      - build-frontend
+      - build-backend
+      - test-frontend:
+         requires: [build-frontend]
+      - test-backend:
+         requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]  
+      - notify_on_success:
+         requires:
 
-      #    - test-frontend
-      #    - test-backend
-      #    - scan-frontend
-      #    - scan-backend    
+         - test-frontend
+         - test-backend
+         - scan-frontend
+         - scan-backend    
 
       - deploy-infrastructure:
       
-          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches: 
               only: [main]
@@ -501,8 +501,8 @@ workflows:  # create workflows
           requires: [deploy-infrastructure]
       - deploy-backend:
           requires: [run-migrations]   
-      - smoke-test:
-          requires: [deploy-backend, deploy-frontend]
+      # - smoke-test:
+      #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
       #     requires: [smoke-test]
       # - cleanup:
