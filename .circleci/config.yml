@@ -305,18 +305,15 @@ jobs:
   
   deploy-backend:
     docker:
-      - image: mareimorsy/aws-node
+      - image:  mareimorsy/aws-node
     steps:
+
       - checkout
-      # - install_aws_cli
-      # - install_ansible
-      # - install_nodejs
+
       - add_ssh_keys:
-          fingerprints: ["99:f9:df:cb:72:06:35:04:8d:1f:55:88:23:93:7f:bd"] 
-      - attach_workspace:
-          at: ~/
-      - restore_cache:
-          keys: [backend-build]
+
+         fingerprints: ["99:f9:df:cb:72:06:35:04:8d:1f:55:88:23:93:7f:bd"]
+      
       - run:
           name: Deploy backend
           command: |
@@ -345,8 +342,8 @@ jobs:
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
             
-      # - destroy-environment   
-          # - revert-migrations 
+      - destroy-environment   
+      - revert-migrations 
   
   smoke-test:
     docker:
@@ -487,20 +484,20 @@ workflows:  # create workflows
          - scan-frontend
          - scan-backend    
 
-      - deploy-infrastructure:
+      # - deploy-infrastructure:
       
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches: 
-              only: [main]
-      - configure-infrastructure:
-          requires: [deploy-infrastructure] 
-      - run-migrations:
-          requires: [configure-infrastructure] 
-      - deploy-frontend:
-          requires: [deploy-infrastructure]
-      - deploy-backend:
-          requires: [run-migrations]   
+      #     requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      #     filters:
+      #       branches: 
+      #         only: [main]
+      # - configure-infrastructure:
+      #     requires: [deploy-infrastructure] 
+      # - run-migrations:
+      #     requires: [configure-infrastructure] 
+      # - deploy-frontend:
+      #     requires: [deploy-infrastructure]
+      # - deploy-backend:
+      #     requires: [run-migrations]   
       # - smoke-test:
       #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
