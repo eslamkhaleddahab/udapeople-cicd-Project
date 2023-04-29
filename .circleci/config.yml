@@ -197,41 +197,41 @@ jobs:
 
   deploy-infrastructure:
     docker:
-      - image: cimg/base:stable
+      - image: amazon/aws-cli
     steps:
       - checkout
-      - install_aws_cli
+
       - run:
-          name: Ensure back-end infrastructure exists
+          name: Install dependencies
           command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/backend.yml \
-              --tags project=udapeople \
-              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+            yum install -y tar gzip
+      # - run:
+      #     name: Ensure back-end infrastructure exists
+      #     command: |
+      #       aws cloudformation deploy \
+      #         --template-file .circleci/files/backend.yml \
+      #         --tags project=udapeople \
+      #         --stack-name "backend" \
+      #         --parameter-overrides ID=${CIRCLE_WORKFLOW_ID:0:5}
+
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
               --tags project=udapeople \
-              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+              --stack-name "frontend-${CIRCLE_WORKFLOW_ID:0:5}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:5}"
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text)
-            echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
+            aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text >> .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      # Here's where you will add some code to rollback on failure
-      - destroy-environment
+#       # Here's where you will add some code to rollback on failure      
+      # - destroy_environment
 
   configure-infrastructure:
     docker:
@@ -240,7 +240,7 @@ jobs:
       - checkout
       - install_ansible
       - add_ssh_keys:
-          fingerprints: ["99:f9:df:cb:72:06:35:04:8d:1f:55:88:23:93:7f:bd"]
+          fingerprints: ["0f:89:f1:c7:49:5f:00:3d:6f:41:ad:20:5f:e7:87:42"]
       - attach_workspace:
           at: ~/
       - run:
@@ -327,7 +327,7 @@ jobs:
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["99:f9:df:cb:72:06:35:04:8d:1f:55:88:23:93:7f:bd"]
+          fingerprints: ["0f:89:f1:c7:49:5f:00:3d:6f:41:ad:20:5f:e7:87:42"]
       - attach_workspace:
           at: ~/
       - restore_cache:

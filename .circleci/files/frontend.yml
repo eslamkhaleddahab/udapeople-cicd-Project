@@ -20,7 +20,6 @@ Resources:
         BlockPublicPolicy: false
         IgnorePublicAcls: false
         RestrictPublicBuckets: false 
-      WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: 404.html
   
