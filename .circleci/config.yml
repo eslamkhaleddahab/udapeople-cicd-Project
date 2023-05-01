@@ -44,15 +44,15 @@ commands:
     parameters:
       Workflow_ID:
         type: string
-        default: ${CIRCLE_WORKFLOW_ID:0:5}
+        default: ${CIRCLE_WORKFLOW_ID:0:7}
     steps:
       - run:
-          name: Destroy environment
+          name: Destroy environments
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name frontend-cd290
-            aws s3 rm s3://udapeople-d0914 --recursive
-            aws cloudformation delete-stack --stack-name frontend-1b592
+            aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.Workflow_ID >>
+            aws s3 rm s3://udapeople-<< parameters.Workflow_ID >> --recursive
+            aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.Workflow_ID >>
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     parameters:
@@ -80,6 +80,7 @@ commands:
               npm run migrations:revert > revert_migrations_dump.txt
               cat revert_migrations_dump.txt
             fi
+
 jobs:
   build-frontend:
     docker:
