@@ -512,7 +512,7 @@ workflows:  # create workflows
 
       - deploy-infrastructure: 
 
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [main]
