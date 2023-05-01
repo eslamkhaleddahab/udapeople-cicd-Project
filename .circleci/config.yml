@@ -364,30 +364,30 @@ jobs:
 
   smoke-test:
     docker:
-      # Lightweight Docker image 
-      - image: cimg/base:stable
+      - image: mareimorsy/aws-node
     steps:
-      # Checkout code from git
+
       - checkout
-      - install_awscli
-      - install_nodejs
+      
       - run:
-          name: Get backend url
+          name: Backend smoke test.
           command: |
-            # your code here
-            export BACKEND_IP=$(aws ec2 describe-instances \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --filters "Name=tag:project, Values=udapeople" \
-            --output text)
-            echo "$BACKEND_IP"
-            export API_URL="http://${BACKEND_IP}:3030"
-            echo "${API_URL}"
-            if curl "${API_URL}/api/status" | grep "ok" 
+            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+            --filters Name=tag:Project,Values=Udapeople \
+            --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            
+            BACKEND_URL="http://$BACKEND_PUBLIC_IP:3030/api/status"
+            
+            if curl -s $BACKEND_URL | grep "ok"
             then
+              echo "Backend works"
               exit 0
             else
               exit 1
             fi
+            pwd
+      - destroy-environment   
+      - revert-migrations
 
       - run:
           name: Frontend smoke test.
@@ -401,8 +401,8 @@ jobs:
               exit 1
             fi
       # Here's where you will add some code to rollback on failure  
-      # - destroy-environment
-      # - revert-migrations
+      - destroy-environment
+      - revert-migrations
 
   cloudfront-update:
     docker:
