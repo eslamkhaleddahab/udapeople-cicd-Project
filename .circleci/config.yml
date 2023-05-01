@@ -7,43 +7,43 @@ commands:
     description: Install AWS CLI v2
     steps:
       - run:
-          name: Install AWS CLI v2
+          name: install aws cli v2
           command: |
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
             unzip awscliv2.zip
             sudo ./aws/install
+
   install_ansible:
-    description: Install Ansible
+    description: install ansible
     steps:
       - run:
-          name: Install Ansible
+          name: install ansible
           command: |
             sudo apt update
             sudo apt install software-properties-common -y
             sudo add-apt-repository --yes --update ppa:ansible/ansible
             sudo apt install ansible -y
   install_nodejs:
-    description: Install Node.js 13
+    description: install NodeJS 13
     steps:
       - run:
-          name: Install Node.js 13
+          name: install NodeJS 13
           command: |
-            # Install Node.js LTS version as our base Node.js version
             curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
             sudo apt install -y nodejs
-            # Use n version manager to use Node.js v13.8.0
+
             sudo npm install --global n
             sudo n 13.8.0
-  # notifiy_on_fail:
-  #   description: Notify on fail to Slack
-  #   steps:
-  #   - slack/notify:
-  #       event: fail
-  #       template: basic_fail_1
-  #       channel: circle-ci
+  notify_on_failure:
+    steps:
+      - slack/notify:
+          event: fail
+          channel: cicd-application
+          template: basic_fail_1
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
+      # Add parameter here
       Workflow_ID:
         type: string
         default: ${CIRCLE_WORKFLOW_ID:0:7}
@@ -52,28 +52,33 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
+            # Your code here
             aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.Workflow_ID >>
-            aws s3 rm s3://udapeople-<<parameters.Workflow_ID>> --recursive
+            aws s3 rm s3://udapeople-<< parameters.Workflow_ID >> --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.Workflow_ID >>
+
   revert-migrations:
-    description: Revert the last migration
+    description: Revert the last migration if successfully run in the current workflow.
     parameters:
+      # Add parameter here
       Workflow_ID:
         type: string
         default: ${CIRCLE_WORKFLOW_ID:0:7}
     steps:
       - run:
           name: Revert migrations
+          # Add when this will run
           when: on_fail
           command: |
-            SUCCESS=$(curl --insecure  https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
-            # Logic for reverting the database state
-            if (( $SUCCESS == 1 ));
+            # Curl command here to see if there was a successful migration associated with the workflow id, store result in SUCCESS variable
+            SUCCESS=$(curl --insecure https://kvdb.io/MaGP6Xi8L6533u3645QfAG/migration_<< parameters.Workflow_ID >>)
+            if(( $SUCCESS==1 ));
             then
               cd ~/project/backend
               npm install
               npm run migration:revert
             fi
+
 jobs:
   build-frontend:
     docker:
@@ -91,7 +96,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
-      # - notify_on_failure
+      - notify_on_failure
 
   build-backend:
     docker:
@@ -110,7 +115,7 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
-      # - notify_on_failure
+      - notify_on_failure
 
 
   test-frontend:
@@ -126,7 +131,7 @@ jobs:
             cd frontend
             npm install
             npm test
-      # - notify_on_failure
+      - notify_on_failure
 
 
   test-backend:
@@ -142,7 +147,7 @@ jobs:
             cd backend
             npm install
             npm test
-      # - notify_on_failure
+      - notify_on_failure
 
   scan-frontend:
     docker:
@@ -159,7 +164,7 @@ jobs:
             npm audit fix --force --audit-level=critical
             npm audit fix --force --audit-level=critical
             npm audit --audit-level=critical
-      # - notify_on_failure
+      - notify_on_failure
 
   scan-backend:
     docker:
@@ -176,7 +181,7 @@ jobs:
             npm audit fix --force --audit-level=critical
             npm audit fix --force --audit-level=critical
             npm audit --audit-level=critical
-      # - notify_on_failure
+      - notify_on_failure
 
 
 
@@ -357,40 +362,47 @@ jobs:
       - destroy-environment
       - revert-migrations
 
-
   smoke-test:
     docker:
+      # Lightweight Docker image 
       - image: cimg/base:stable
     steps:
+      # Checkout code from git
       - checkout
       - install_awscli
       - install_nodejs
       - run:
-          name: Backend smoke test.
+          name: Get backend url
           command: |
-            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --output text)
-            export API_URL=http://${BACKEND_PUBLIC_IP}:3030
-            if curl -s $API_URL/api/status | grep "ok"
+            # your code here
+            export BACKEND_IP=$(aws ec2 describe-instances \
+            --query 'Reservations[*].Instances[*].PublicIpAddress' \
+            --filters "Name=tag:project, Values=udapeople" \
+            --output text)
+            echo "$BACKEND_IP"
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "${API_URL}"
+            if curl "${API_URL}/api/status" | grep "ok" 
             then
               exit 0
             else
               exit 1
             fi
+
       - run:
           name: Frontend smoke test.
           command: |
+            # your code here
             FRONTEND_WEBSITE=http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website.${AWS_DEFAULT_REGION}.amazonaws.com
             if curl -s $FRONTEND_WEBSITE | grep "Welcome"
             then
               exit 0
             else
               exit 1
-
             fi
-            
+      # Here's where you will add some code to rollback on failure  
+      - destroy-environment
+      - revert-migrations
 
   cloudfront-update:
     docker:
@@ -475,16 +487,16 @@ jobs:
 workflows:  # create workflows
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-         requires: [build-frontend]
-      - test-backend:
-         requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
+      # - build-frontend
+      # - build-backend
+      # - test-frontend:
+      #    requires: [build-frontend]
+      # - test-backend:
+      #    requires: [build-backend]
+      # - scan-backend:
+      #     requires: [build-backend]
+      # - scan-frontend:
+      #     requires: [build-frontend]
       # - notify_on_success:
       #    requires:
       #    - test-frontend
@@ -492,21 +504,21 @@ workflows:  # create workflows
       #    - scan-frontend
       #    - scan-backend    
 
-      - deploy-infrastructure: 
+      # - deploy-infrastructure: 
 
           # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [main]
-      - configure-infrastructure:
-          requires: [deploy-infrastructure]
-      - run-migrations:
-          requires: [configure-infrastructure]
-      - deploy-frontend:
-          requires: [deploy-infrastructure]
-      - deploy-backend:
-          requires: [run-migrations]
-      # - smoke-test
+      #     filters:
+      #       branches:
+      #         only: [main]
+      # - configure-infrastructure:
+      #     requires: [deploy-infrastructure]
+      # - run-migrations:
+      #     requires: [configure-infrastructure]
+      # - deploy-frontend:
+      #     requires: [deploy-infrastructure]
+      # - deploy-backend:
+      #     requires: [run-migrations]
+      - smoke-test
       #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
       #     requires: [smoke-test]
