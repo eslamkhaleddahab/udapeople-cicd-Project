@@ -367,9 +367,9 @@ jobs:
       - image: cimg/base:stable
     
     steps:
-    
+
       - checkout
-      - install_aws_cli
+      # - install_aws_cli
       - install_ansible
       - run:
           name: Backend smoke test.
