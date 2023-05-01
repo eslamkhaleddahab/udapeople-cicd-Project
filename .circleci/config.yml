@@ -240,7 +240,7 @@ jobs:
       - checkout
       - install_ansible
       - add_ssh_keys:
-          fingerprints: ["a2:c5:32:8f:5c:67:d8:84:74:f3:0e:37:18:55:bd:41"]
+          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - attach_workspace:
           at: ~/
       - run:
@@ -327,7 +327,7 @@ jobs:
       - install_ansible
       - install_nodejs
       - add_ssh_keys:
-          fingerprints: ["a2:c5:32:8f:5c:67:d8:84:74:f3:0e:37:18:55:bd:41"]
+          fingerprints: ["d9:11:52:f5:19:c9:91:7c:12:01:d4:82:0b:e5:ca:b4"]
       - attach_workspace:
           at: ~/
       - restore_cache:
@@ -389,12 +389,24 @@ jobs:
             # Run the check
             if curl $API_URL/api/status | grep ok
             then
+
               exit 0
             else
               exit 1
               
             fi
 
+      - run:
+          name: Frontend smoke test.
+          command: |
+            FRONTEND_WEBSITE=http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-${AWS_DEFAULT_REGION}.amazonaws.com
+            echo $FRONTEND_WEBSITE
+            if curl -s $FRONTEND_WEBSITE | grep Welcome
+            then
+              exit 0
+            else
+              exit 1
+            fi
       - destroy-environment
       - revert-migrations
 
@@ -481,26 +493,26 @@ jobs:
 workflows:  # create workflows
   default:
     jobs:
-      # - build-frontend
-      # - build-backend
-      # - test-frontend:
-      #    requires: [build-frontend]
-      # - test-backend:
-      #    requires: [build-backend]
-      # - scan-backend:
-      #     requires: [build-backend]
-      # - scan-frontend:
-      #     requires: [build-frontend]
-      # - notify_on_success:
-      #    requires:
-      #    - test-frontend
-      #    - test-backend
-      #    - scan-frontend
-      #    - scan-backend    
+      - build-frontend
+      - build-backend
+      - test-frontend:
+         requires: [build-frontend]
+      - test-backend:
+         requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]
+      - notify_on_success:
+         requires:
+         - test-frontend
+         - test-backend
+         - scan-frontend
+         - scan-backend    
 
       # - deploy-infrastructure: 
 
-          # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      #     requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       #     filters:
       #       branches:
       #         only: [main]
@@ -512,7 +524,7 @@ workflows:  # create workflows
       #     requires: [deploy-infrastructure]
       # - deploy-backend:
       #     requires: [run-migrations]
-      - smoke-test
+      # - smoke-test:
       #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
       #     requires: [smoke-test]
