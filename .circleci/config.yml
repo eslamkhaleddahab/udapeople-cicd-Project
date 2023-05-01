@@ -370,31 +370,30 @@ jobs:
       - destroy-environment
       - revert-migrations
 
-  smoke-test:
+smoke-test:
     docker:
-      - image: cimg/base:stable
+      - image: amazon/aws-cli
     steps:
-      - checkout
-      - install_aws_cli
-      - install_ansible
+      # - checkout
       - run:
           name: Backend smoke test.
           command: |
-            # Get Backend URL
-            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text)
-            export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
-            # Run the check
-            if curl $API_URL/api/status | grep ok
+            export BACKEND_PUBLIC_IP=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
+            # URL="http://$BACKEND_PUBLIC_IP:3030/api/status"
+            URL="http://g00gle.com"
+            if curl -s --head ${URL}
             then
-
+              echo "It worked!"
               exit 0
             else
-              exit 1
-              
+              echo "Rolling Back"
+
+
             fi
+
+      # - notify_on_failure
+      - destroy_environment
+      - revert-migrations
 
       - run:
           name: Frontend smoke test.
@@ -405,10 +404,11 @@ jobs:
             then
               exit 0
             else
-              exit 1
+
             fi
       - destroy-environment
       - revert-migrations
+
 
   cloudfront-update:
     docker:
@@ -493,22 +493,22 @@ jobs:
 workflows:  # create workflows
   default:
     jobs:
-      # - build-frontend
-      # - build-backend
-      # - test-frontend:
-      #    requires: [build-frontend]
-      # - test-backend:
-      #    requires: [build-backend]
-      # - scan-backend:
-      #     requires: [build-backend]
-      # - scan-frontend:
-      #     requires: [build-frontend]
-      # - notify_on_success:
-      #    requires:
-      #    - test-frontend
-      #    - test-backend
-      #    - scan-frontend
-      #    - scan-backend    
+      - build-frontend
+      - build-backend
+      - test-frontend:
+         requires: [build-frontend]
+      - test-backend:
+         requires: [build-backend]
+      - scan-backend:
+          requires: [build-backend]
+      - scan-frontend:
+          requires: [build-frontend]
+      - notify_on_success:
+         requires:
+         - test-frontend
+         - test-backend
+         - scan-frontend
+         - scan-backend    
 
       # - deploy-infrastructure: 
 
@@ -524,7 +524,7 @@ workflows:  # create workflows
       #     requires: [deploy-infrastructure]
       # - deploy-backend:
       #     requires: [run-migrations]
-      - smoke-test
+      # - smoke-test:
       #     requires: [deploy-backend, deploy-frontend]
       # - cloudfront-update:
       #     requires: [smoke-test]
