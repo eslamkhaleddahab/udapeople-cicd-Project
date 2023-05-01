@@ -7,39 +7,10 @@ commands:
     steps:
       - slack/notify:
           event: fail
-          channel: cicd-udacity-project
+          channel: $SLACK_DEFAULT_CHANNEL
           template: basic_fail_1
-  install_aws_cli:
-    steps:
-      - run:
-          name: Install AWS CLI
-          command: |
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
-  install_ansible:
-    description: Install Ansible on Ubuntu
-    steps:
-      - run:
-          name: Install Ansible
-          command: |
-            sudo apt update
-            sudo apt install software-properties-common
-            sudo add-apt-repository --yes --update ppa:ansible/ansible
-            sudo apt install ansible -y
-  install_nodejs:
-    description: Install Node.js 13
-    steps:
-      - run:
-          name: Install Node.js 13
-          command: |
-            # First: we install lts version as base
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt install -y nodejs
-            # Then: we install n version manager to get to required version
-            sudo npm install --global n
-            sudo n 13.8.0
-  destroy-environment:
+
+  destroy_environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
       Workflow_ID:
@@ -47,14 +18,14 @@ commands:
         default: ${CIRCLE_WORKFLOW_ID:0:7}
     steps:
       - run:
-          name: Destroy environments
+          name: Destroy environment
           when: on_fail
           command: |
             aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.Workflow_ID >>
             aws s3 rm s3://udapeople-<< parameters.Workflow_ID >> --recursive
             aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.Workflow_ID >>
   revert-migrations:
-    description: Revert the last migration if successfully run in the current workflow.
+    description: Revert the last migration
     parameters:
       Workflow_ID:
         type: string
@@ -64,21 +35,14 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            # Install Node.js 13
-            # First: we install lts version as base
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt install -y nodejs
-            # Then: we install n version manager to get to required version
-            sudo npm install --global n
-            sudo n 13.8.0
-            SUCCESS=$(curl https://kvdb.io/${KVDB_BUCKET}/migration_<< parameters.Workflow_ID >>)
-            # Revert database changes
-            if [[ $SUCCESS==1 ]]
+            SUCCESS=$(curl --insecure  https://kvdb.io/2FEKtxgt2Te2Jvw4pdRSqp/migration_<< parameters.Workflow_ID >>)
+            echo "$SUCCESS"
+            # Logic for reverting the database state
+            if (( $SUCCESS == 1 ));
             then
               cd ~/project/backend
               npm install
-              npm run migrations:revert > revert_migrations_dump.txt
-              cat revert_migrations_dump.txt
+              npm run migrations:revert
             fi
 
 jobs:
@@ -366,7 +330,7 @@ jobs:
 
   smoke-test:
     docker:
-      - image: karimfarahat/aws-node
+      - image: cimg/base:stable
     steps:
       - checkout
       - attach_workspace:
@@ -387,9 +351,9 @@ jobs:
               echo "Rolling Back after failure"
               exit 1
             fi
-      - notify_on_failure
-      - destroy_environment
-      - revert-migrations
+      # - notify_on_failure
+      # - destroy_environment
+      # - revert-migrations
 
   cloudfront-update:
     docker:
