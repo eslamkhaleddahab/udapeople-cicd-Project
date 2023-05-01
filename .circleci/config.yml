@@ -370,30 +370,31 @@ jobs:
       - destroy-environment
       - revert-migrations
 
-smoke-test:
+  smoke-test:
     docker:
-      - image: amazon/aws-cli
+      - image: cimg/base:stable
     steps:
-      # - checkout
+      - checkout
+      - install_aws_cli
+      - install_ansible
       - run:
           name: Backend smoke test.
           command: |
-            export BACKEND_PUBLIC_IP=$(aws ec2 describe-instances --region us-east-1 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)
-            # URL="http://$BACKEND_PUBLIC_IP:3030/api/status"
-            URL="http://g00gle.com"
-            if curl -s --head ${URL}
+            # Get Backend URL
+            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+            --query 'Reservations[*].Instances[*].PublicIpAddress' \
+            --output text)
+            export API_URL="http://${BACKEND_PUBLIC_IP}:3030"
+            # Run the check
+            if curl $API_URL/api/status | grep ok
             then
-              echo "It worked!"
+
               exit 0
             else
-              echo "Rolling Back"
-
-
+              exit 1
+              
             fi
-
-      # - notify_on_failure
-      - destroy_environment
-      - revert-migrations
 
       - run:
           name: Frontend smoke test.
@@ -404,11 +405,10 @@ smoke-test:
             then
               exit 0
             else
-
+              exit 1
             fi
       - destroy-environment
       - revert-migrations
-
 
   cloudfront-update:
     docker:
@@ -435,7 +435,6 @@ smoke-test:
             --stack-name "Initial-Stack"
       - destroy-environment
       - revert-migrations
-      
   cleanup:
     docker:
       - image: mareimorsy/aws-node
