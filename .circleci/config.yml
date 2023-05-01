@@ -435,6 +435,7 @@ smoke-test:
             --stack-name "Initial-Stack"
       - destroy-environment
       - revert-migrations
+      
   cleanup:
     docker:
       - image: mareimorsy/aws-node
